@@ -489,7 +489,7 @@ class StreamWriter:
         err = lib.StreamAddTable(self.sw_index, byref(options)).decode(ENCODE)
         return None if err == "" else Exception(err)
 
-    def insert_page_break(self, cell: str) -> Optional[Exception]:
+    def stream_insert_page_break(self, cell: str) -> Optional[Exception]:
         """
         Creates a page break to determine where the printed page ends and where
         begins the next one by a given cell reference, the content before the
@@ -1792,6 +1792,32 @@ class File:
             None if err == "" else Exception(err)
         )
 
+    def group_sheets(self, sheets: list[str]) -> Optional[Exception]:
+        """
+        Group worksheets.
+
+        Args:
+        sheets (List[str]): The worksheet names to be grouped.
+
+        Returns:
+            Optional[Exception]: Returns None if no error occurred,
+            otherwise returns an Exception with the message.
+        """
+        lib.GroupSheets.restype = c_char_p
+        lib.GroupSheets.argtypes = [c_int, POINTER(POINTER(c_char)), c_int]
+        c_strings = []
+        for s in sheets:
+            c_strings.append(create_string_buffer(s.encode(ENCODE)))
+        sheet_array = (POINTER(c_char) * len(c_strings))()
+        for i, s in enumerate(c_strings):
+            sheet_array[i] = cast(s, POINTER(c_char))
+        err = lib.GroupSheets(
+            self.file_index,
+            sheet_array,
+            len(sheets)
+        ).decode(ENCODE)
+        return None if err == "" else Exception(err)
+
     def insert_cols(self, sheet: str, col: str, n: int) -> Optional[Exception]:
         """
         Insert new columns before the given column name and number of columns.
@@ -1822,6 +1848,24 @@ class File:
             sheet.encode(ENCODE),
             col.encode(ENCODE),
             c_int(n),
+        ).decode(ENCODE)
+        return None if err == "" else Exception(err)
+
+    def insert_page_break(self, sheet: str, cell: str) -> Optional[Exception]:
+        """
+        Insert Page Break.
+        Args:
+            sheet (str): The worksheet name
+            cell (str): The column name
+        Returns:
+            Optional[Exception]: Returns None if no error occurred,
+            otherwise returns an Exception with the message.
+        """
+        lib.InsertPageBreak.restype = c_char_p
+        err = lib.InsertPageBreak(
+            self.file_index,
+            sheet.encode(ENCODE),
+            cell.encode(ENCODE),
         ).decode(ENCODE)
         return None if err == "" else Exception(err)
 

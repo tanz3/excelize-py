@@ -90,7 +90,7 @@ class TestExcelize(unittest.TestCase):
         sw, err = f.new_stream_writer("Sheet1")
         self.assertIsNone(err)
 
-        self.assertIsNone(sw.insert_page_break("A1"))
+        self.assertIsNone(sw.stream_insert_page_break("A1"))
         self.assertIsNone(sw.merge_cell("D1", "E2"))
         self.assertIsNone(sw.set_col_width(3, 2, 20))
         self.assertIsNone(
@@ -285,6 +285,23 @@ class TestExcelize(unittest.TestCase):
         self.assertIsNone(f.merge_cell("Sheet1", "A1", "B2"))
         self.assertIsNone(f.unmerge_cell("Sheet1", "A1", "B2"))
 
+        self.assertIsNone(f.insert_page_break("Sheet1", "A1"))
+        self.assertIsNone(f.insert_page_break("Sheet1", "B2"))
+        self.assertIsNone(f.insert_page_break("Sheet1", "C3"))
+        self.assertIsNone(f.insert_page_break("Sheet1", "C3"))
+        self.assertEqual(
+            str(f.insert_page_break("Sheet1", "A")),
+            'cannot convert cell "A" to coordinates: invalid cell name "A"'
+        )
+        self.assertEqual(
+            str(f.insert_page_break("SheetN", "C3")),
+            "sheet SheetN does not exist"
+        )
+        self.assertEqual(
+            str(f.insert_page_break("Sheet:1", "C3")),
+            "the sheet can not contain any of the characters :\\/?*[or]"
+        )
+
         idx, err = f.new_sheet("Sheet2")
         self.assertEqual(idx, 1)
         self.assertIsNone(err)
@@ -405,6 +422,31 @@ class TestExcelize(unittest.TestCase):
         with open("chart.png", "rb") as file:
             _, err = excelize.open_reader(file.read(), excelize.Options(password=""))
             self.assertEqual(str(err), "zip: not a valid zip file")
+
+    def test_group_sheets(self):
+        f = excelize.new_file()
+
+        sheets = ["Sheet2", "Sheet3"]
+        for sheet in sheets:
+            _, err = f.new_sheet(sheet)
+            self.assertIsNone(err)
+
+        self.assertEqual(
+            str(f.group_sheets(["Sheet1", "SheetN"])),
+            "sheet SheetN does not exist"
+        )
+        self.assertEqual(
+            str(f.group_sheets(["Sheet2", "Sheet3"])),
+            "group worksheet must contain an active worksheet"
+        )
+        self.assertEqual(
+            str(f.group_sheets(["Sheet:1", "Sheet1"])),
+            "the sheet can not contain any of the characters :\\/?*[or]"
+        )
+        self.assertIsNone(f.group_sheets(["Sheet1", "Sheet2"]))
+
+        self.assertIsNone(f.save_as(os.path.join("test", "TestGroupSheets.xlsx")))
+        self.assertIsNone(f.close())
 
     def test_add_chart(self):
         f = excelize.new_file()
